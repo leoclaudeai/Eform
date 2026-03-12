@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FMD Technical Inspection Record</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ── Navbar ──────────────────────────────────────────────────────── -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="index.html" class="navbar-brand">
+      <div class="navbar-brand-icon">📋</div>
+      FMD Inspection
+    </a>
+    <div class="navbar-nav">
+      <a href="dashboard.html" class="nav-link">📊 Dashboard</a>
+      <a href="dashboard.html" class="nav-link">☰ Inspections</a>
+      <a href="index.html" class="nav-link active nav-link-new">+ New Inspection</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── Loading Overlay ─────────────────────────────────────────────── -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <p class="loading-text" id="loadingText">Generating PDF and submitting...</p>
+</div>
+
+<!-- ── Toast ───────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── Main ────────────────────────────────────────────────────────── -->
+<main class="page">
+
+  <!-- Success Screen -->
+  <div class="success-screen" id="successScreen">
+    <div class="success-icon">✅</div>
+    <h2>Inspection Submitted Successfully</h2>
+    <p>The PDF has been emailed and saved to Google Drive.</p>
+    <div id="driveLinkWrap" style="margin-top:12px;display:none">
+      <a id="driveLinkBtn" class="btn-drive" href="#" target="_blank">📁 View on Google Drive</a>
+    </div>
+    <div class="success-actions">
+      <button class="btn-new" onclick="resetForm()">+ Submit Another</button>
+    </div>
+  </div>
+
+  <!-- Form -->
+  <div id="formWrap">
+    <div class="fmd-banner">
+      <div class="fmd-banner-icon">📝</div>
+      <div class="fmd-banner-text">
+        <h2>FMD Technical Inspection Record</h2>
+        <p>設施維修部承辦商合約檢查紀錄</p>
+      </div>
+    </div>
+
+    <form id="inspectionForm" novalidate>
+
+      <!-- ── Contract Number ──────────────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Contract Number</h3></div>
+        <div class="card-body">
+          <div class="contract-row">
+            <div class="form-group" style="flex:1">
+              <label for="contractNo">Outsourced Contract No. <span class="required">*</span></label>
+              <input type="text" id="contractNo" name="contractNo" placeholder="e.g. 1181450" required>
+            </div>
+            <div class="lv-box">
+              <label for="lvBox">LV</label>
+              <input type="text" id="lvBox" name="lvBox" placeholder="LV" maxlength="10">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Date & Inspector ─────────────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Date &amp; Inspector</h3></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="inspectionDate">Date of Inspection <span class="required">*</span></label>
+              <input type="date" id="inspectionDate" name="inspectionDate" required>
+            </div>
+            <div class="form-group">
+              <label for="inspectionTime">Time of Inspection <span class="required">*</span></label>
+              <input type="time" id="inspectionTime" name="inspectionTime" required>
+            </div>
+            <div class="form-group full">
+              <label for="inspectorName">Name of Inspector <span class="required">*</span></label>
+              <input type="text" id="inspectorName" name="inspectorName" placeholder="Full name" required>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Works Details ────────────────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Works Details</h3></div>
+        <div class="card-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="location">Location <span class="required">*</span></label>
+              <input type="text" id="location" name="location" placeholder="e.g. HOK" required>
+            </div>
+            <div class="form-group">
+              <label for="workNature">Work Nature (PM/CM) <span class="required">*</span></label>
+              <select id="workNature" name="workNature" required>
+                <option value="">Select...</option>
+                <option value="PM">PM</option>
+                <option value="CM">CM</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="contractNoDetails">Contract No.</label>
+              <input type="text" id="contractNoDetails" name="contractNoDetails" placeholder="e.g. 1181450">
+            </div>
+            <div class="form-group">
+              <label for="contractor">Contractor</label>
+              <input type="text" id="contractor" name="contractor" placeholder="Contractor name">
+            </div>
+            <div class="form-group">
+              <label for="nameOfCp">Name of CP</label>
+              <input type="text" id="nameOfCp" name="nameOfCp" placeholder="CP name">
+            </div>
+            <div class="form-group">
+              <label for="responsibleManager">Responsible Manager (MTR)</label>
+              <input type="text" id="responsibleManager" name="responsibleManager" placeholder="Manager name">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Audit Items: Pre-audit ───────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Audit Items (Pre-audit)</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="audit-table-2col">
+            <tbody>
+              <tr>
+                <td class="q-cell">PM WI/ Check sheet follows the review requirement?</td>
+                <td class="a-cell">
+                  <div class="radio-group">
+                    <label><input type="radio" name="preAudit1" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="preAudit1" value="No"> No</label>
+                  </div>
+                </td>
+                <td class="divider"></td>
+                <td class="q-cell">PM WI/ Check sheet follows the latest regulations and standards of particular system?</td>
+                <td class="a-cell">
+                  <div class="radio-group">
+                    <label><input type="radio" name="preAudit2" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="preAudit2" value="No"> No</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="q-cell">Is the related JHA valid?</td>
+                <td class="a-cell">
+                  <div class="radio-group">
+                    <label><input type="radio" name="preAudit3" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="preAudit3" value="No"> No</label>
+                  </div>
+                </td>
+                <td class="divider"></td>
+                <td class="q-cell">Is the WI/ check sheets latest updated version?</td>
+                <td class="a-cell">
+                  <div class="radio-group">
+                    <label><input type="radio" name="preAudit4" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="preAudit4" value="No"> No</label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Audit Items: Competency ──────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Audit Items (Competency)</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="audit-table">
+            <tbody>
+              <tr>
+                <td class="audit-q">Do maintenance personnel obtain required competence to perform the work? (Check the record of qualification and working experience of the personnel)</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp1" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp1" value="No"> No</label>
+                    <label><input type="radio" name="comp1" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Is the number of staff sufficient for the workload?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp2" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp2" value="No"> No</label>
+                    <label><input type="radio" name="comp2" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do maintenance personnel have adequate time for completing the planned works?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp3" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp3" value="No"> No</label>
+                    <label><input type="radio" name="comp3" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do personnel understand the procedure?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp4" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp4" value="No"> No</label>
+                    <label><input type="radio" name="comp4" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do personnel follow the procedures detailed in the WI when conducting works?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp5" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp5" value="No"> No</label>
+                    <label><input type="radio" name="comp5" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do maintenance personnel have special tools and equipment properly calibrated &amp; properly used?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp6" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp6" value="No"> No</label>
+                    <label><input type="radio" name="comp6" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Does the maintenance personnel subcontract any part of the work?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp7" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="comp7" value="No"> No</label>
+                    <label><input type="radio" name="comp7" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">If sub-contractor in-place are all subcontractor arrangements using the same procedures as for MTR approved ones?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="comp8" value="Yes"> Yes</label>
+                    <label><input type="radio" name="comp8" value="No"> No</label>
+                    <label><input type="radio" name="comp8" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Audit Items: Effectiveness ───────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Audit Items (Effectiveness)</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="audit-table">
+            <tbody>
+              <tr>
+                <td class="audit-q">Are the procedures or methods used effective with no stipulated steps?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="eff1" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="eff1" value="No"> No</label>
+                    <label><input type="radio" name="eff1" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Is space sufficient for the work?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="eff2" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="eff2" value="No"> No</label>
+                    <label><input type="radio" name="eff2" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Is a written procedure in place to address the action required for unaccepted test result? Failure reasons and repair actions should be recorded in check sheet clearly.</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="eff3" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="eff3" value="No"> No</label>
+                    <label><input type="radio" name="eff3" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">If there's deficiencies identified by test, any corrective action taken in a timely and safe manner before further use?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="eff4" value="Yes"> Yes</label>
+                    <label><input type="radio" name="eff4" value="No"> No</label>
+                    <label><input type="radio" name="eff4" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Can the maintenance results be clearly indicated in the maintenance/ inspection records?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="eff5" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="eff5" value="No"> No</label>
+                    <label><input type="radio" name="eff5" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Audit Items: WI Verification ────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Audit Items (WI Verification)</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="audit-table">
+            <tbody>
+              <tr>
+                <td class="audit-q">Do the WI procedures involve any SCI?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="wi1" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="wi1" value="No"> No</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do the WI procedures indicate the correct performance of critical maintenance tasks (ie. SCI) if applicable?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="wi2" value="Yes"> Yes</label>
+                    <label><input type="radio" name="wi2" value="No"> No</label>
+                    <label><input type="radio" name="wi2" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do the WI procedures involve any fingering procedure?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="wi3" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="wi3" value="No"> No</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do the WI procedures indicate clearly and practically the correct performance of fingering procedure if applicable?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="wi4" value="Yes"> Yes</label>
+                    <label><input type="radio" name="wi4" value="No"> No</label>
+                    <label><input type="radio" name="wi4" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Is the WI procedure practical for work?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="wi5" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="wi5" value="No"> No</label>
+                    <label><input type="radio" name="wi5" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── Audit Items: Worksite ────────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>Audit Items (Worksite)</h3></div>
+        <div class="card-body" style="padding:0">
+          <table class="audit-table">
+            <tbody>
+              <tr>
+                <td class="audit-q">Is the working place clean and tidy?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="ws1" value="Yes" required> Yes</label>
+                    <label><input type="radio" name="ws1" value="No"> No</label>
+                    <label><input type="radio" name="ws1" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Is the workplace place safe without any hazard?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="ws2" value="Yes, Safe" required> Yes, Safe</label>
+                    <label><input type="radio" name="ws2" value="No"> No</label>
+                    <label><input type="radio" name="ws2" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+              <tr>
+                <td class="audit-q">Do the maintenance personnel follow the policies and procedures for parts &amp; material control?</td>
+                <td class="audit-a">
+                  <div class="radio-group">
+                    <label><input type="radio" name="ws3" value="Yes, Safe" required> Yes, Safe</label>
+                    <label><input type="radio" name="ws3" value="No"> No</label>
+                    <label><input type="radio" name="ws3" value="N/A"> N/A</label>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ── No. of Findings ──────────────────────────────────────── -->
+      <div class="card card-section">
+        <div class="card-header"><h3>No. of Findings</h3></div>
+        <div class="card-body">
+          <div class="findings-count-wrap">
+            <div class="findings-count-display" id="findingsDisplay">0</div>
+            <div class="findings-count-controls">
+              <button type="button" onclick="changeFindingsCount(1)">+</button>
+              <button type="button" onclick="changeFindingsCount(-1)">−</button>
+            </div>
+            <input type="hidden" name="noOfFindings" id="noOfFindings" value="0">
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Findings 1–5 ─────────────────────────────────────────── -->
+      <div id="findingsSections">
+        <div class="finding-section card card-section" id="finding1">
+          <div class="card-header">
+            <h3><span class="finding-number">1</span> Finding</h3>
+          </div>
+          <div class="card-body">
+            <div class="form-grid" style="grid-template-columns:1fr">
+              <div class="form-group">
+                <label>Findings</label>
+                <textarea name="finding1_findings" placeholder="Describe the finding..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Improvement Actions</label>
+                <textarea name="finding1_actions" placeholder="Describe improvement actions..."></textarea>
+              </div>
+              <div class="form-group">
+                <label>Action By</label>
+                <input type="text" name="finding1_actionBy" placeholder="Name / Team">
+              </div>
+              <div class="form-group">
+                <label>Photos / Videos</label>
+                <div class="photo-upload-area" id="uploadArea1">
+                  <input type="file" name="finding1_photos" accept="image/*,video/*" multiple onchange="handlePhotoUpload(this, 'preview1')">
+                  <span style="color:var(--gray-400);font-size:13px">📎 Click to attach photos or videos</span>
+                </div>
+                <div class="photo-preview-grid" id="preview1"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding-section card card-section" id="finding2">
+          <div class="card-header"><h3><span class="finding-number">2</span> Finding</h3></div>
+          <div class="card-body">
+            <div class="form-grid" style="grid-template-columns:1fr">
+              <div class="form-group"><label>Findings</label><textarea name="finding2_findings" placeholder="Describe the finding..."></textarea></div>
+              <div class="form-group"><label>Improvement Actions</label><textarea name="finding2_actions" placeholder="Describe improvement actions..."></textarea></div>
+              <div class="form-group"><label>Action By</label><input type="text" name="finding2_actionBy" placeholder="Name / Team"></div>
+              <div class="form-group">
+                <label>Photos / Videos</label>
+                <div class="photo-upload-area"><input type="file" name="finding2_photos" accept="image/*,video/*" multiple onchange="handlePhotoUpload(this, 'preview2')"><span style="color:var(--gray-400);font-size:13px">📎 Click to attach photos or videos</span></div>
+                <div class="photo-preview-grid" id="preview2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding-section card card-section" id="finding3">
+          <div class="card-header"><h3><span class="finding-number">3</span> Finding</h3></div>
+          <div class="card-body">
+            <div class="form-grid" style="grid-template-columns:1fr">
+              <div class="form-group"><label>Findings</label><textarea name="finding3_findings" placeholder="Describe the finding..."></textarea></div>
+              <div class="form-group"><label>Improvement Actions</label><textarea name="finding3_actions" placeholder="Describe improvement actions..."></textarea></div>
+              <div class="form-group"><label>Action By</label><input type="text" name="finding3_actionBy" placeholder="Name / Team"></div>
+              <div class="form-group">
+                <label>Photos / Videos</label>
+                <div class="photo-upload-area"><input type="file" name="finding3_photos" accept="image/*,video/*" multiple onchange="handlePhotoUpload(this, 'preview3')"><span style="color:var(--gray-400);font-size:13px">📎 Click to attach photos or videos</span></div>
+                <div class="photo-preview-grid" id="preview3"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding-section card card-section" id="finding4">
+          <div class="card-header"><h3><span class="finding-number">4</span> Finding</h3></div>
+          <div class="card-body">
+            <div class="form-grid" style="grid-template-columns:1fr">
+              <div class="form-group"><label>Findings</label><textarea name="finding4_findings" placeholder="Describe the finding..."></textarea></div>
+              <div class="form-group"><label>Improvement Actions</label><textarea name="finding4_actions" placeholder="Describe improvement actions..."></textarea></div>
+              <div class="form-group"><label>Action By</label><input type="text" name="finding4_actionBy" placeholder="Name / Team"></div>
+              <div class="form-group">
+                <label>Photos / Videos</label>
+                <div class="photo-upload-area"><input type="file" name="finding4_photos" accept="image/*,video/*" multiple onchange="handlePhotoUpload(this, 'preview4')"><span style="color:var(--gray-400);font-size:13px">📎 Click to attach photos or videos</span></div>
+                <div class="photo-preview-grid" id="preview4"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="finding-section card card-section" id="finding5">
+          <div class="card-header"><h3><span class="finding-number">5</span> Finding</h3></div>
+          <div class="card-body">
+            <div class="form-grid" style="grid-template-columns:1fr">
+              <div class="form-group"><label>Findings</label><textarea name="finding5_findings" placeholder="Describe the finding..."></textarea></div>
+              <div class="form-group"><label>Improvement Actions</label><textarea name="finding5_actions" placeholder="Describe improvement actions..."></textarea></div>
+              <div class="form-group"><label>Action By</label><input type="text" name="finding5_actionBy" placeholder="Name / Team"></div>
+              <div class="form-group">
+                <label>Photos / Videos</label>
+                <div class="photo-upload-area"><input type="file" name="finding5_photos" accept="image/*,video/*" multiple onchange="handlePhotoUpload(this, 'preview5')"><span style="color:var(--gray-400);font-size:13px">📎 Click to attach photos or videos</span></div>
+                <div class="photo-preview-grid" id="preview5"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── Footer ──────────────────────────────────────────────── -->
+      <div class="form-footer">
+        <button type="button" class="btn-reset" onclick="resetForm()">Reset</button>
+        <button type="submit" class="btn-submit" id="submitBtn">
+          <span>📤</span> Submit Inspection
+        </button>
+      </div>
+
+    </form>
+  </div><!-- /formWrap -->
+</main>
+
+<!-- ── PDF hidden template ─────────────────────────────────────────── -->
+<div id="pdfTemplate" style="display:none; font-family:Arial,sans-serif; font-size:11px; color:#222; width:700px; padding:0;">
+  <!-- filled dynamically by form.js before PDF generation -->
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="js/form.js"></script>
+</body>
+</html>
