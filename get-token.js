@@ -19,11 +19,10 @@
 
 const { google } = require('googleapis');
 const http = require('http');
-const url = require('url');
 
 // ── Fill these in ──────────────────────────────────────────────────
-const CLIENT_ID     = '316975783650-shs9tg9942dc9ncdh64h5iapvcmvf9bn.apps.googleusercontent.com';
-const CLIENT_SECRET = 'GGOCSPX-Z6g0wjPk0v5pIkNvCEaktlrZIThP';
+const CLIENT_ID     = '316975783650-il6q5s3ldfou00pjttvvj7ckfungndig.apps.googleusercontent.com';
+const CLIENT_SECRET = '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';
 // ──────────────────────────────────────────────────────────────────
 
 const REDIRECT_URI = 'http://localhost:3001/oauth2callback';
@@ -45,14 +44,15 @@ console.log('3. You will be redirected back and the refresh token will be printe
 
 // Temporary local server to catch the OAuth callback
 const server = http.createServer(async (req, res) => {
-  const qs = url.parse(req.url, true).query;
-  if (!qs.code) { res.end('No code received.'); return; }
+  const qs = new URL(req.url, 'http://localhost:3001').searchParams;
+  const code = qs.get('code');
+  if (!code) { res.end('No code received.'); return; }
 
   res.end('<h2>Done! You can close this tab and check your terminal.</h2>');
   server.close();
 
   try {
-    const { tokens } = await oauth2Client.getToken(qs.code);
+    const { tokens } = await oauth2Client.getToken(code);
     console.log('\n✅ SUCCESS! Add this to Netlify environment variables:\n');
     console.log('GOOGLE_DRIVE_CLIENT_ID     =', CLIENT_ID);
     console.log('GOOGLE_DRIVE_CLIENT_SECRET =', CLIENT_SECRET);
