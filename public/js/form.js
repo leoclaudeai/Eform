@@ -294,17 +294,21 @@ function buildPdfHtml(data) {
 
 // ── Generate PDF (returns base64 string) ───────────────────────────
 async function generatePdf(data) {
-  // Create a temporary container that's in the DOM so html2canvas can render it
+  // Append container visibly to the DOM — the loading overlay already covers it.
+  // z-index tricks prevent html2canvas from capturing content, so we avoid them.
   const container = document.createElement('div');
-  container.style.cssText = 'position:absolute;left:0;top:0;width:794px;z-index:-9999;pointer-events:none;';
+  container.style.cssText = 'position:absolute;left:0;top:0;width:794px;pointer-events:none;';
   container.innerHTML = buildPdfHtml(data);
   document.body.appendChild(container);
+
+  // Give the browser one frame to lay out and paint the new element
+  await new Promise(resolve => setTimeout(resolve, 150));
 
   const opt = {
     margin:       [8, 8, 8, 8],
     filename:     `FMD_${data.location}_${data.contractNo}_${data.inspectionDate}.pdf`,
     image:        { type: 'jpeg', quality: 0.92 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
+    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 794 },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
