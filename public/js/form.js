@@ -294,18 +294,22 @@ function buildPdfHtml(data) {
 
 // ── Generate PDF (returns base64 string) ───────────────────────────
 async function generatePdf(data) {
-  const template = document.getElementById('pdfTemplate');
-  template.innerHTML = buildPdfHtml(data);
+  // Create a temporary container that's in the DOM so html2canvas can render it
+  const container = document.createElement('div');
+  container.style.cssText = 'position:absolute;left:0;top:0;width:794px;z-index:-9999;pointer-events:none;';
+  container.innerHTML = buildPdfHtml(data);
+  document.body.appendChild(container);
 
   const opt = {
     margin:       [8, 8, 8, 8],
     filename:     `FMD_${data.location}_${data.contractNo}_${data.inspectionDate}.pdf`,
     image:        { type: 'jpeg', quality: 0.92 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false },
+    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0 },
     jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
   };
 
-  const pdfBlob = await html2pdf().set(opt).from(template).outputPdf('blob');
+  const pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
+  document.body.removeChild(container);
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
