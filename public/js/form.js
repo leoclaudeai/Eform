@@ -296,7 +296,6 @@ function buildPdfHtml(data) {
 async function generatePdf(data) {
   const template = document.getElementById('pdfTemplate');
   template.innerHTML = buildPdfHtml(data);
-  template.style.display = 'block';
 
   const opt = {
     margin:       [8, 8, 8, 8],
@@ -307,7 +306,6 @@ async function generatePdf(data) {
   };
 
   const pdfBlob = await html2pdf().set(opt).from(template).outputPdf('blob');
-  template.style.display = 'none';
 
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
