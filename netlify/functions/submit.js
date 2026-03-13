@@ -16,18 +16,22 @@ exports.handler = async (event) => {
   const { formData, pdfBase64 } = body;
 
   try {
-    // ── 1. Upload PDF to Google Drive ──────────────────────────────────────
-    const serviceAccountJson = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
-    const auth = new google.auth.GoogleAuth({
-      credentials: serviceAccountJson,
-      scopes: [
-        'https://www.googleapis.com/auth/drive.file',
-        'https://www.googleapis.com/auth/spreadsheets',
-      ],
-    });
+    // ── 1. Upload PDF to Google Drive (OAuth2 — uses your personal Drive quota) ─
+    const oauth2Client = new google.auth.OAuth2(
+      process.env.GOOGLE_DRIVE_CLIENT_ID,
+      process.env.GOOGLE_DRIVE_CLIENT_SECRET,
+    );
+    oauth2Client.setCredentials({ refresh_token: process.env.GOOGLE_DRIVE_REFRESH_TOKEN });
 
-    const drive = google.drive({ version: 'v3', auth });
-    const sheets = google.sheets({ version: 'v4', auth });
+    const drive = google.drive({ version: 'v3', auth: oauth2Client });
+
+    // Service account auth — used only for Google Sheets
+    const serviceAccountJson = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+    const saAuth = new google.auth.GoogleAuth({
+      credentials: serviceAccountJson,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+    });
+    const sheets = google.sheets({ version: 'v4', auth: saAuth });
 
     const pdfBuffer = Buffer.from(pdfBase64, 'base64');
     const fileName = `FMD_${formData.location || 'Unknown'}_${formData.contractNo || 'NA'}_${formData.inspectionDate || 'NA'}.pdf`
