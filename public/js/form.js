@@ -107,7 +107,252 @@ function validate(data) {
   return true;
 }
 
-// ── Build PDF HTML ──────────────────────────────────────────────────
+// ── Generate PDF with jsPDF (no DOM rendering) ─────────────────────
+async function generatePdf(data) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+
+  const W = 210, M = 10, CW = W - M * 2;
+  let y = M;
+
+  // ── Helpers ──────────────────────────────────────────────────────
+  const checkPage = (needed = 10) => {
+    if (y + needed > 285) { doc.addPage(); y = M; }
+  };
+
+  const hLine = (yPos, x1 = M, x2 = W - M, r = 226, g = 232, b = 240) => {
+    doc.setDrawColor(r, g, b); doc.setLineWidth(0.2);
+    doc.line(x1, yPos, x2, yPos);
+  };
+
+  const sectionTitle = (title) => {
+    checkPage(14);
+    doc.setFillColor(239, 246, 255);
+    doc.rect(M, y, CW, 7, 'F');
+    doc.setDrawColor(37, 99, 235); doc.setLineWidth(1);
+    doc.line(M, y, M, y + 7);
+    doc.setLineWidth(0.2);
+    doc.setFontSize(8); doc.setFont('helvetica', 'bold');
+    doc.setTextColor(26, 58, 107);
+    doc.text(title.toUpperCase(), M + 3, y + 4.8);
+    y += 7;
+  };
+
+  const labelVal = (label, value, x, yPos, lw = 45) => {
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text(label, x, yPos);
+    doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'bold');
+    const lines = doc.splitTextToSize(String(value || ''), CW / 2 - lw - 2);
+    doc.text(lines, x + lw, yPos);
+    return lines.length;
+  };
+
+  const auditRow = (question, answer, x = M, w = CW) => {
+    checkPage(12);
+    const qLines = doc.splitTextToSize(question, w * 0.70 - 4);
+    const rowH = Math.max(qLines.length * 4 + 4, 8);
+    doc.setFillColor(255, 255, 255);
+    doc.rect(x, y, w, rowH, 'F');
+    hLine(y + rowH, x, x + w);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
+    doc.text(qLines, x + 2, y + 5);
+    doc.setTextColor(71, 85, 105);
+    doc.text(String(answer || ''), x + w * 0.73, y + 5);
+    y += rowH;
+  };
+
+  const auditRow2col = (q1, a1, q2, a2) => {
+    checkPage(12);
+    const hw = CW / 2 - 1;
+    const q1Lines = doc.splitTextToSize(q1, hw * 0.70 - 4);
+    const q2Lines = doc.splitTextToSize(q2, hw * 0.70 - 4);
+    const rowH = Math.max(q1Lines.length, q2Lines.length) * 4 + 4;
+    hLine(y + rowH, M, W - M);
+    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(30, 41, 59);
+    doc.text(q1Lines, M + 2, y + 5);
+    doc.setTextColor(71, 85, 105); doc.text(String(a1 || ''), M + hw * 0.73, y + 5);
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.2);
+    doc.line(M + hw + 1, y, M + hw + 1, y + rowH);
+    doc.setTextColor(30, 41, 59); doc.setFont('helvetica', 'normal');
+    doc.text(q2Lines, M + hw + 3, y + 5);
+    doc.setTextColor(71, 85, 105); doc.text(String(a2 || ''), M + hw + hw * 0.73, y + 5);
+    y += rowH;
+  };
+
+  // ── Header ────────────────────────────────────────────────────────
+  doc.setFillColor(26, 58, 107);
+  doc.rect(M, y, CW, 16, 'F');
+  doc.setFontSize(13); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
+  doc.text('FMD Technical Inspection Record', M + 6, y + 7);
+  doc.setFontSize(9); doc.setFont('helvetica', 'normal');
+  doc.text('\u8a2d\u65bd\u7dad\u4fee\u90e8\u627f\u8fa6\u5546\u5408\u7d04\u6aa2\u67e5\u7d00\u9304', M + 6, y + 13);
+  y += 16;
+
+  // ── Contract Number ───────────────────────────────────────────────
+  doc.setFillColor(248, 250, 252);
+  doc.rect(M, y, CW, 10, 'F');
+  hLine(y + 10);
+  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(26, 58, 107);
+  doc.text('CONTRACT NUMBER', M + 2, y + 4.5);
+  doc.setFontSize(10); doc.setTextColor(220, 38, 38);
+  doc.text(`Outsourced   ${data.contractNo || ''}`, M + 2, y + 9);
+  // LV box
+  doc.setDrawColor(220, 38, 38); doc.setLineWidth(0.8);
+  doc.rect(W - M - 25, y + 1, 23, 8);
+  doc.setFontSize(7); doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38);
+  doc.text('LV', W - M - 13.5, y + 4.5, { align: 'center' });
+  doc.setFontSize(9); doc.text(data.lvBox || '', W - M - 13.5, y + 8, { align: 'center' });
+  y += 10;
+
+  // ── Date & Inspector ──────────────────────────────────────────────
+  sectionTitle('Date & Inspector');
+  const diRows = [
+    ['Date of inspection', data.inspectionDate],
+    ['Time of inspection', data.inspectionTime],
+    ['Name of Inspector',  data.inspectorName],
+  ];
+  diRows.forEach(([lbl, val]) => {
+    checkPage(8);
+    doc.setFillColor(255, 255, 255); doc.rect(M, y, CW, 8, 'F'); hLine(y + 8);
+    labelVal(lbl, val, M + 2, y + 5.5);
+    y += 8;
+  });
+
+  // ── Works Details ─────────────────────────────────────────────────
+  sectionTitle('Works Details');
+  const wdRows = [
+    ['Location', data.location, 'Work Nature (PM/CM)', data.workNature],
+    ['Contract No.', data.contractNoDetails || data.contractNo, 'Contractor', data.contractor],
+    ['Name of CP', data.nameOfCp, 'Responsible Manager (MTR)', data.responsibleManager],
+  ];
+  wdRows.forEach(([l1, v1, l2, v2]) => {
+    checkPage(8);
+    doc.setFillColor(255, 255, 255); doc.rect(M, y, CW, 8, 'F'); hLine(y + 8);
+    doc.setDrawColor(226, 232, 240); doc.setLineWidth(0.2);
+    doc.line(M + CW / 2, y, M + CW / 2, y + 8);
+    labelVal(l1, v1, M + 2, y + 5.5, 35);
+    labelVal(l2, v2, M + CW / 2 + 2, y + 5.5, 45);
+    y += 8;
+  });
+
+  // ── Pre-audit ─────────────────────────────────────────────────────
+  sectionTitle('Audit Items (Pre-audit)');
+  auditRow2col('PM WI/ Check sheet follows the review requirement?', data.preAudit1, 'PM WI/ Check sheet follows the latest regulations and standards of particular system?', data.preAudit2);
+  auditRow2col('Is the related JHA valid?', data.preAudit3, 'Is the WI/ check sheets latest updated version?', data.preAudit4);
+
+  // ── Competency ────────────────────────────────────────────────────
+  sectionTitle('Audit Items (Competency)');
+  [
+    ['Do maintenance personnel obtain required competence to perform the work? (Check the record of qualification and working experience of the personnel)', data.comp1],
+    ['Is the number of staff sufficient for the workload?', data.comp2],
+    ['Do maintenance personnel have adequate time for completing the planned works?', data.comp3],
+    ['Do personnel understand the procedure?', data.comp4],
+    ['Do personnel follow the procedures detailed in the WI when conducting works?', data.comp5],
+    ['Do maintenance personnel have special tools and equipment properly calibrated & properly used?', data.comp6],
+    ['Does the maintenance personnel subcontract any part of the work?', data.comp7],
+    ['If sub-contractor in-place are all subcontractor arrangements using the same procedures as for MTR approved ones?', data.comp8],
+  ].forEach(([q, a]) => auditRow(q, a));
+
+  // ── Effectiveness ─────────────────────────────────────────────────
+  sectionTitle('Audit Items (Effectiveness)');
+  [
+    ['Are the procedures or methods used effective with no stipulated steps?', data.eff1],
+    ['Is space sufficient for the work?', data.eff2],
+    ['Is a written procedure in place to address the action required for unaccepted test result? Failure reasons and repair actions should be recorded in check sheet clearly.', data.eff3],
+    ["If there's deficiencies identified by test, any corrective action taken in a timely and safe manner before further use?", data.eff4],
+    ['Can the maintenance results be clearly indicated in the maintenance/ inspection records?', data.eff5],
+  ].forEach(([q, a]) => auditRow(q, a));
+
+  // ── WI Verification ───────────────────────────────────────────────
+  sectionTitle('Audit Items (WI Verification)');
+  [
+    ['Do the WI procedures involve any SCI?', data.wi1],
+    ['Do the WI procedures indicate the correct performance of critical maintenance tasks (ie. SCI) if applicable?', data.wi2],
+    ['Do the WI procedures involve any fingering procedure?', data.wi3],
+    ['Do the WI procedures indicate clearly and practically the correct performance of fingering procedure if applicable?', data.wi4],
+    ['Is the WI procedure practical for work?', data.wi5],
+  ].forEach(([q, a]) => auditRow(q, a));
+
+  // ── Worksite ──────────────────────────────────────────────────────
+  sectionTitle('Audit Items (Worksite)');
+  [
+    ['Is the working place clean and tidy?', data.ws1],
+    ['Is the workplace place safe without any hazard?', data.ws2],
+    ['Do the maintenance personnel follow the policies and procedures for parts & material control?', data.ws3],
+  ].forEach(([q, a]) => auditRow(q, a));
+
+  // ── No. of Findings ───────────────────────────────────────────────
+  checkPage(20);
+  sectionTitle('No. of Findings');
+  doc.setDrawColor(220, 38, 38); doc.setLineWidth(0.8);
+  doc.rect(M + 2, y + 2, 20, 16);
+  doc.setFontSize(18); doc.setFont('helvetica', 'bold'); doc.setTextColor(220, 38, 38);
+  doc.text(String(data.noOfFindings || 0), M + 12, y + 14, { align: 'center' });
+  y += 20;
+
+  // ── Findings ──────────────────────────────────────────────────────
+  data.findings.forEach((f, i) => {
+    checkPage(40);
+    sectionTitle(`Finding (${i + 1})`);
+    const findingRows = [
+      ['Findings', f.findings],
+      ['Improvement Actions', f.actions],
+      ['Action By', f.actionBy],
+    ];
+    findingRows.forEach(([lbl, val]) => {
+      const lines = doc.splitTextToSize(val || '', CW - 52);
+      const rowH = Math.max(lines.length * 4 + 4, 8);
+      checkPage(rowH + 2);
+      doc.setFillColor(255, 255, 255); doc.rect(M, y, CW, rowH, 'F'); hLine(y + rowH);
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+      doc.text(lbl, M + 2, y + 5);
+      doc.setTextColor(30, 41, 59);
+      doc.text(lines, M + 50, y + 5);
+      y += rowH;
+    });
+    // Photos
+    const imgPhotos = f.photos.filter(p => p.type && p.type.startsWith('image/'));
+    if (imgPhotos.length > 0) {
+      checkPage(12);
+      doc.setFillColor(255, 255, 255); doc.rect(M, y, CW, 8, 'F'); hLine(y + 8);
+      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+      doc.text('Photos/Videos', M + 2, y + 5);
+      doc.setTextColor(30, 41, 59);
+      doc.text(`${imgPhotos.length} photo(s) attached`, M + 50, y + 5);
+      y += 8;
+      // Add photos
+      let px = M + 2;
+      imgPhotos.forEach(p => {
+        checkPage(42);
+        if (px + 42 > W - M) { px = M + 2; y += 42; checkPage(42); }
+        try {
+          const fmt = p.type.includes('png') ? 'PNG' : 'JPEG';
+          doc.addImage(p.base64, fmt, px, y, 38, 38);
+        } catch (_) { /* skip invalid images */ }
+        px += 42;
+      });
+      if (imgPhotos.length > 0) y += 42;
+    }
+  });
+
+  // ── Footer ────────────────────────────────────────────────────────
+  checkPage(14);
+  doc.setFillColor(248, 250, 252); doc.rect(M, y, CW, 10, 'F');
+  hLine(y); hLine(y + 10);
+  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+  doc.text('Date of Submission', M + 2, y + 6);
+  doc.setTextColor(71, 85, 105); doc.setFont('helvetica', 'bold');
+  doc.text(data.submissionDate || '', M + 38, y + 6);
+  doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
+  doc.text('Submitted By', M + CW / 2 + 2, y + 6);
+  doc.setTextColor(71, 85, 105); doc.setFont('helvetica', 'bold');
+  doc.text(data.inspectorName || '', M + CW / 2 + 28, y + 6);
+
+  return doc.output('datauristring').split(',')[1]; // base64
+}
+
+// ── Build PDF HTML (no longer used — kept for reference) ───────────
 function buildPdfHtml(data) {
   const auditRow = (q, a) => `
     <tr>
@@ -290,37 +535,6 @@ function buildPdfHtml(data) {
     </div>
 
   </div>`;
-}
-
-// ── Generate PDF (returns base64 string) ───────────────────────────
-async function generatePdf(data) {
-  // Append container visibly to the DOM — the loading overlay already covers it.
-  // z-index tricks prevent html2canvas from capturing content, so we avoid them.
-  const container = document.createElement('div');
-  container.style.cssText = 'position:absolute;left:0;top:0;width:794px;pointer-events:none;';
-  container.innerHTML = buildPdfHtml(data);
-  document.body.appendChild(container);
-
-  // Give the browser one frame to lay out and paint the new element
-  await new Promise(resolve => setTimeout(resolve, 150));
-
-  const opt = {
-    margin:       [8, 8, 8, 8],
-    filename:     `FMD_${data.location}_${data.contractNo}_${data.inspectionDate}.pdf`,
-    image:        { type: 'jpeg', quality: 0.92 },
-    html2canvas:  { scale: 2, useCORS: true, logging: false, scrollX: 0, scrollY: 0, windowWidth: 794 },
-    jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  };
-
-  const pdfBlob = await html2pdf().set(opt).from(container).outputPdf('blob');
-  document.body.removeChild(container);
-
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]); // base64 only
-    reader.onerror = reject;
-    reader.readAsDataURL(pdfBlob);
-  });
 }
 
 // ── Submit ──────────────────────────────────────────────────────────
